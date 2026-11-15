@@ -4,7 +4,7 @@
 // @version      1.2
 // @description  Auto-feed with Discord webhook logging and UI Toggle Button
 // @author       Made by tap
-// @match        agma.io
+// @match        *://agma.io/*
 // @grant        none
 // ==/UserScript==
 
@@ -20,34 +20,29 @@
 
     // Tạo giao diện nút bấm On/Off trên màn hình
     const toggleButton = document.createElement('button');
-    toggleButton.id = 'autoFeedToggleBtn';
-    
-    // Style cho nút (đặt ở góc trên bên trái, dễ nhìn, không vướng game)
-    Object.assign(toggleButton.style, {
-        position: 'fixed',
-        top: '10px',
-        left: '10px',
-        zIndex: '999999',
-        padding: '8px 14px',
-        fontSize: '14px',
-        fontWeight: 'bold',
-        color: '#ffffff',
-        border: 'none',
-        borderRadius: '5px',
-        cursor: 'pointer',
-        boxShadow: '0 2px 5px rgba(0,0,0,0.3)',
-        transition: 'background-color 0.2s'
-    });
-
+    toggleButton.innerText = 'Auto-Feed: OFF';
+    toggleButton.style.position = 'fixed';
+    toggleButton.style.top = '10px';
+    toggleButton.style.left = '10px';
+    toggleButton.style.zIndex = '999999';
+    toggleButton.style.padding = '10px 15px';
+    toggleButton.style.backgroundColor = '#ff4d4d';
+    toggleButton.style.color = 'white';
+    toggleButton.style.border = 'none';
+    toggleButton.style.borderRadius = '5px';
+    toggleButton.style.cursor = 'pointer';
+    toggleButton.style.fontWeight = 'bold';
+    toggleButton.style.fontSize = '14px';
+    toggleButton.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
     document.body.appendChild(toggleButton);
 
-    function updateButtonStyle() {
-        if (isAutoFeeding) {
-            toggleButton.innerText = 'Auto-Feed: ON (`)';
-            toggleButton.style.backgroundColor = '#2ecc71'; // Xanh lá
+    function updateUIButton(state) {
+        if (state) {
+            toggleButton.innerText = 'Auto-Feed: ON';
+            toggleButton.style.backgroundColor = '#4CAF50';
         } else {
-            toggleButton.innerText = 'Auto-Feed: OFF (`)';
-            toggleButton.style.backgroundColor = '#e74c3c'; // Đỏ
+            toggleButton.innerText = 'Auto-Feed: OFF';
+            toggleButton.style.backgroundColor = '#ff4d4d';
         }
     }
 
@@ -79,7 +74,7 @@
     function updateFeedingState(state) {
         isAutoFeeding = state;
         localStorage.setItem(feedStateKey, state);
-        updateButtonStyle();
+        updateUIButton(state);
         
         if (state) {
             console.log("Enabling auto-feed...");
@@ -128,19 +123,31 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(message),
-        })
-            .then(response => {
-                if (response.ok) {
-                    console.log('Webhook log sent successfully.');
-                } else {
-                    console.error('Failed to send webhook log:', response.statusText);
-                }
-            })
-            .catch(error => {
-                console.error('Error sending webhook log:', error);
-            });
+        }).catch(error => {
+            console.error('Error sending webhook log:', error);
+        });
     }
 
-    // Lắng nghe sự kiện bàn phím (Phím `)
+    // Sự kiện nhấn phím tắt
     document.addEventListener('keydown', function (event) {
-        // Tránh kích hoạt khi đang gõ chữ
+        if (event.key === toggleKey) {
+            updateFeedingState(!isAutoFeeding);
+        }
+    });
+
+    // Sự kiện click trực tiếp vào nút On/Off trên màn hình
+    toggleButton.addEventListener('click', function () {
+        updateFeedingState(!isAutoFeeding);
+    });
+
+    worker.onmessage = function (event) {
+        if (event.data === 'keydown') {
+            sendFeedEvent('keydown');
+        } else if (event.data === 'keyup') {
+            sendFeedEvent('keyup');
+        }
+    };
+
+    const storedState = localStorage.getItem(feedStateKey) === 'true';
+    updateFeedingState(storedState);
+})();
